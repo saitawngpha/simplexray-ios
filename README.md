@@ -122,8 +122,15 @@ Please review the upstream license before commercial use:
 
 If you encounter issues:
 
-- Open an issue in this repository
-- Verify you are using a supported iOS version
+- For iOS integration, build, or packaging issues, open an issue in this repository
+
+- This repository only provides a precompiled iOS XCFramework — it does not modify libXray logic
+
+- For libXray core behavior, configuration, or protocol issues, please report them to the upstream libXray repository:
+👉 https://github.com/XTLS/libXray
+
+- Verify you are using a supported iOS version (15+)
+
 - Ensure the selected release exists
 
 ---
