@@ -1,69 +1,82 @@
 name: Release
 
+permissions:
+  contents: write
+
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version'     
+        description: 'Release version'
         required: true
         type: string
       tag:
-        description: 'Git Tag to checkout'
+        description: 'Git Tag to checkout (XTLS/libXray)'
         required: true
         type: string
 
 jobs:
   release:
     runs-on: macOS-15
+
     steps:
-
-      - uses: actions/checkout@v3
-
-      - uses: actions/checkout@v3
+      - name: Checkout main repo
+        uses: actions/checkout@v3
         with:
-          repository: 'XTLS/libXray'
-          path: 'xray'
+          fetch-depth: 0
+
+      - name: Checkout XTLS/libXray
+        uses: actions/checkout@v3
+        with:
+          repository: XTLS/libXray
+          path: xray
           ref: ${{ github.event.inputs.tag }}
-          
+
+      - name: Fail if release tag already exists
+        run: |
+          git fetch --tags
+          if git rev-parse "${{ github.event.inputs.version }}" >/dev/null 2>&1; then
+            echo "❌ Tag ${{ github.event.inputs.version }} already exists. Bump version."
+            exit 1
+          fi
+
       - name: Setup Go
         uses: actions/setup-go@v3.5.0
         with:
           go-version: '1.24.4'
-          
+
       - name: Build xcframework
         run: |
           cd xray
           python3 build/main.py apple gomobile
-          zip -ry ./LibXray.xcframework.zip ./LibXray.xcframework
-          
+          zip -ry LibXray.xcframework.zip LibXray.xcframework
+
       - name: Detect checksum
         run: |
-          export TEMP=`shasum -a 256 xray/LibXray.xcframework.zip`
-          export CHECKSUM=${TEMP:0:64}
-          echo "FILE_CHECKSUM=${CHECKSUM}" >> $GITHUB_ENV
-          unset CHECKSUM
-          unset TEMP
-          
-      - name: Update package file
+          CHECKSUM=$(shasum -a 256 xray/LibXray.xcframework.zip | awk '{print $1}')
+          echo "FILE_CHECKSUM=$CHECKSUM" >> $GITHUB_ENV
+
+      - name: Generate Package.swift
         run: |
-          echo "// swift-tools-version: 5.7" > Package.swift
-          echo "" >> Package.swift
-          echo "import PackageDescription" >> Package.swift
-          echo "" >> Package.swift
-          echo "let package = Package(" >> Package.swift
-          echo "  name: \"LibXray\"," >> Package.swift
-          echo "  platforms: [.iOS(.v15)]," >> Package.swift
-          echo "  products: [" >> Package.swift
-          echo "    .library(name: \"LibXray\", targets: [\"LibXray\"])" >> Package.swift
-          echo "  ]," >> Package.swift
-          echo "  targets: [" >> Package.swift
-          echo "    .binaryTarget(" >> Package.swift
-          echo "      name: \"LibXray\"," >> Package.swift
-          echo "      url: \"https://github.com/saitawngpha/simplexray-ios/releases/download/${{ github.event.inputs.version }}/LibXray.xcframework.zip\"," >> Package.swift
-          echo "      checksum: \"${{ env.FILE_CHECKSUM }}\"" >> Package.swift
-          echo "    )" >> Package.swift
-          echo "  ]" >> Package.swift
-          echo ")" >> Package.swift
+          cat > Package.swift <<EOF
+          // swift-tools-version: 5.7
+          import PackageDescription
+
+          let package = Package(
+            name: "LibXray",
+            platforms: [.iOS(.v15)],
+            products: [
+              .library(name: "LibXray", targets: ["LibXray"])
+            ],
+            targets: [
+              .binaryTarget(
+                name: "LibXray",
+                url: "https://github.com/saitawngpha/simplexray-ios/releases/download/${{ github.event.inputs.version }}/LibXray.xcframework.zip",
+                checksum: "${{ env.FILE_CHECKSUM }}"
+              )
+            ]
+          )
+          EOF
 
       - name: Generate Podspec
         run: |
@@ -75,7 +88,7 @@ jobs:
             s.homepage         = 'https://github.com/saitawngpha/simplexray-ios'
             s.license          = { :type => 'MIT', :file => 'LICENSE' }
             s.author           = { 'Ebrahim Tahernejad' => 'xaioharn@gmail.com' }
-            s.source           = { :http => "https://github.com/saitawngpha/simplexray-ios/releases/download/${{ github.event.inputs.version }}/LibXray.xcframework.zip" }
+            s.source           = { :http => 'https://github.com/saitawngpha/simplexray-ios/releases/download/${{ github.event.inputs.version }}/LibXray.xcframework.zip' }
             s.vendored_frameworks = 'LibXray.xcframework'
             s.platform         = :ios, '15.0'
             s.requires_arc     = true
@@ -84,34 +97,20 @@ jobs:
           end
           EOF
 
-      - name: Delete tag if exists
-        run: |
-          TAG="${{ github.event.inputs.version }}"
-      
-          git fetch --tags
-      
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Deleting existing tag: $TAG"
-            git tag -d "$TAG"
-            git push origin ":refs/tags/$TAG"
-          else
-            echo "Tag $TAG does not exist, skipping"
-          fi
-          
-      - uses: stefanzweifel/git-auto-commit-action@v4
+      - name: Commit Package files
+        uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: LibXray Release ${{ github.event.inputs.version }}
           commit_user_name: Xaio Harn
           commit_user_email: xaioharn@gmail.com
-          tagging_message: ${{ github.event.inputs.version }}
-          file_pattern: 'Package.swift LibXray.podspec'
-          
-      - name: Upload Release
+          file_pattern: Package.swift LibXray.podspec
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          draft: false
           tag_name: ${{ github.event.inputs.version }}
-          body: 'Compiled from source tag: ${{ github.event.inputs.tag }}'
+          name: LibXray ${{ github.event.inputs.version }}
+          body: Compiled from source tag ${{ github.event.inputs.tag }}
           files: xray/LibXray.xcframework.zip
 
       # - name: Validate Podspec
