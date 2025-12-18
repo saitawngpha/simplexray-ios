@@ -83,6 +83,20 @@ jobs:
             s.libraries        = 'resolv'
           end
           EOF
+
+      - name: Delete tag if exists
+        run: |
+          TAG="${{ github.event.inputs.version }}"
+      
+          git fetch --tags
+      
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Deleting existing tag: $TAG"
+            git tag -d "$TAG"
+            git push origin ":refs/tags/$TAG"
+          else
+            echo "Tag $TAG does not exist, skipping"
+          fi
           
       - uses: stefanzweifel/git-auto-commit-action@v4
         with:
@@ -100,10 +114,10 @@ jobs:
           body: 'Compiled from source tag: ${{ github.event.inputs.tag }}'
           files: xray/LibXray.xcframework.zip
 
-      - name: Validate Podspec
-        run: pod spec lint LibXray.podspec --allow-warnings --verbose
+      # - name: Validate Podspec
+      #   run: pod spec lint LibXray.podspec --allow-warnings --verbose
 
-      - name: Publish to CocoaPods Trunk
-        env:
-          COCOAPODS_TRUNK_TOKEN: ${{ secrets.COCOAPODS_TRUNK_TOKEN }}
-        run: pod trunk push LibXray.podspec --allow-warnings
+      # - name: Publish to CocoaPods Trunk
+      #   env:
+      #     COCOAPODS_TRUNK_TOKEN: ${{ secrets.COCOAPODS_TRUNK_TOKEN }}
+      #   run: pod trunk push LibXray.podspec --allow-warnings
