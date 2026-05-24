@@ -10,8 +10,8 @@ let package = Package(
   targets: [
     .binaryTarget(
       name: "LibXray",
-      url: "https://github.com/saitawngpha/simplexray-ios/releases/download/v25.12.8/LibXray.xcframework.zip",
-      checksum: "64a0e5529abaafeb8bae98bd8809b36a9a0315623a4341745e6f8a38628a7ed7"
+      url: "https://github.com/saitawngpha/simplexray-ios/releases/download/v26.3.27/LibXray.xcframework.zip",
+      checksum: "cc23b12e8ab3adbd676c7f545e24dc52347346e851232ea97bb52984cd8b3e7a"
     )
   ]
 )
