@@ -1,11 +1,11 @@
 Pod::Spec.new do |s|
   s.name             = 'LibXray'
-  s.version          = 'v26.3.27'
+  s.version          = 'v26.6.27'
   s.summary          = 'Prebuilt binary framework for XTLS/libXray'
   s.homepage         = 'https://github.com/saitawngpha/simplexray-ios'
   s.license          = { :type => 'MIT', :file => 'LICENSE' }
   s.author           = { 'Ebrahim Tahernejad' => 'xaioharn@gmail.com' }
-  s.source           = { :http => 'https://github.com/saitawngpha/simplexray-ios/releases/download/v26.3.27/LibXray.xcframework.zip' }
+  s.source           = { :http => 'https://github.com/saitawngpha/simplexray-ios/releases/download/v26.6.27/LibXray.xcframework.zip' }
   s.vendored_frameworks = 'LibXray.xcframework'
   s.platform         = :ios, '15.0'
   s.requires_arc     = true
